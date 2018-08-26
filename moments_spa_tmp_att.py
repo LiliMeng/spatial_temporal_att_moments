@@ -130,27 +130,6 @@ class Action_Att_LSTM(nn.Module):
 			return result
 
 
-def lr_scheduler(optimizer, epoch_num, init_lr = 0.001, lr_decay_epochs=10):
-	"""Decay learning rate by a factor of 0.1 every lr_decay_epochs.
-	"""
-	using_cyclic_lr = False
-	if using_cyclic_lr == True:
-		eta_min = 5e-8
-		eta_max = 5e-5
-
-		lr =  eta_min + 0.5 * (eta_max - eta_min) * (1 + np.cos(epoch_num/FLAGS.max_epoch * np.pi))
-	else:
-		lr = init_lr *(0.1**(epoch_num//lr_decay_epochs))
-		if epoch_num % lr_decay_epochs == 0:
-			print("Learning rate changed to be : {}".format(lr))
-
-
-	for param_group in optimizer.param_groups:
-		param_group['lr'] = lr
-
-	return optimizer
-
-
 def train(batch_size,
 		  train_data,
 		  train_label,
