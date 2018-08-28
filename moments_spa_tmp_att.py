@@ -111,7 +111,7 @@ class Action_Att_LSTM(nn.Module):
 		output = torch.mean(output,dim=4)
 		output = torch.mean(output,dim=3)
 	
-		att_weight = self.fc_attention(output).view(-1, 22)
+		att_weight = self.fc_attention(output).view(-1, FLAGS.num_segments)
 
 		att_weight = F.softmax(att_weight, dim =1)
 		
@@ -144,8 +144,10 @@ def train(batch_size,
 
 	logits, att_weight, mask, tv_loss, contrast_loss = model.forward(train_data)
 
+
 	loss += criterion(logits, train_label)
 
+	
 	att_reg = F.relu(att_weight[:, :-2] * att_weight[:, 2:] - att_weight[:, 1:-1].pow(2)).sqrt().mean()
 	
 	if FLAGS.use_regularizer:
@@ -203,7 +205,7 @@ def main():
 
 	
 	category_dict = moments_category_dict("./feature_list/category_moment.txt")
-	
+	#print("category_dict ", category_dict)
 	# load train data
 	train_feature_dir = "/media/lili/f9020c94-3607-46d2-bac8-696f0d445708/extracted_features_moments_raw/training_features"
 	train_name_dir = "/media/lili/f9020c94-3607-46d2-bac8-696f0d445708/extracted_features_moments_raw/training_names"
@@ -228,7 +230,7 @@ def main():
 								mode = 'test', 
 								dataset='moments')
 
-	lstm_action = Action_Att_LSTM(input_size=2048, hidden_size=512, output_size=51, seq_len=FLAGS.num_segments).cuda() 
+	lstm_action = Action_Att_LSTM(input_size=2048, hidden_size=512, output_size=339, seq_len=FLAGS.num_segments).cuda() 
 	model_optimizer = torch.optim.Adam(lstm_action.parameters(), lr=FLAGS.init_lr, weight_decay=FLAGS.weight_decay)
 	scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=model_optimizer, mode='min', patience=FLAGS.lr_patience)
 	criterion = nn.CrossEntropyLoss()  
@@ -248,7 +250,7 @@ def main():
 		os.makedirs(saved_weights_folder)
 	
 
-	num_step_per_epoch_train = 3570/FLAGS.train_batch_size
+	num_step_per_epoch_train = 802243/FLAGS.train_batch_size
 	num_step_per_epoch_test = 33900/FLAGS.test_batch_size
 	for epoch_num in range(maxEpoch):
 
@@ -264,10 +266,11 @@ def main():
 		epoch_train_contrast_loss = 0
 		for i, (train_sample,train_batch_name) in enumerate(train_data_loader):
 			
-			train_batch_feature = train_sample['feature'].transpose(1,2)
+			train_batch_feature = train_sample['feature'].transpose(1,2).contiguous().view(-1, 2048, 15, 64).contiguous()
 			train_batch_label = train_sample['label']
+			
 			train_batch_feature = Variable(train_batch_feature).cuda().float()
-			train_batch_label = Variable(train_batch_label[:,0]).cuda().long()
+			train_batch_label = Variable(train_batch_label).cuda().long()
 			
 			train_mask, train_loss, train_reg_loss, train_tv_loss, train_contrast_loss, train_accuracy, train_spa_att_weights, train_corrects = train(FLAGS.train_batch_size, train_batch_feature, train_batch_label, lstm_action, model_optimizer, criterion)
 			#print("train_spa_att_weights[0:5] ",train_spa_att_weights[0:5])
@@ -282,7 +285,7 @@ def main():
 			total_train_corrects+= train_corrects
 			
 		train_spa_att_weights_np = torch.cat(train_spa_att_weights_list, dim=0)
-		avg_train_corrects = total_train_corrects *100 /3570
+		avg_train_corrects = total_train_corrects *100 /802243
 		epoch_train_loss = epoch_train_loss/num_step_per_epoch_train
 		epoch_train_reg_loss = epoch_train_reg_loss/num_step_per_epoch_train
 		epoch_train_tv_loss = epoch_train_tv_loss/num_step_per_epoch_train
@@ -314,11 +317,11 @@ def main():
 		epoch_test_contrast_loss = 0
 		for i, (test_sample, test_batch_name) in enumerate(test_data_loader):
 		
-			test_batch_feature = test_sample['feature'].transpose(1,2)
+			test_batch_feature = test_sample['feature'].transpose(1,2).contiguous().view(FLAGS.test_batch_size, 2048, 15, 64)
 			test_batch_label = test_sample['label']
 			
 			test_batch_feature = Variable(test_batch_feature, volatile=True).cuda().float()
-			test_batch_label = Variable(test_batch_label[:,0], volatile=True).cuda().long()
+			test_batch_label = Variable(test_batch_label, volatile=True).cuda().long()
 			
 
 			test_mask, test_logits, test_loss, test_reg_loss, test_tv_loss, test_contrast_loss, test_accuracy, test_spa_att_weights, test_corrects = test_step(FLAGS.test_batch_size, test_batch_feature, test_batch_label, lstm_action, criterion)
@@ -375,9 +378,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', type=str, default='Moments',
                         help='dataset: "moments"')
-    parser.add_argument('--train_batch_size', type=int, default=10,
+    parser.add_argument('--train_batch_size', type=int, default=64,
                     	help='train_batch_size: [100]')
-    parser.add_argument('--test_batch_size', type=int, default=10,
+    parser.add_argument('--test_batch_size', type=int, default=64,
                     	help='test_batch_size: [100]')
     parser.add_argument('--max_epoch', type=int, default=200,
                     	help='max number of training epoch: [60]')
