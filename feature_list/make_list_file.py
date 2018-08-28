@@ -9,8 +9,8 @@ import numpy as np
 import os
 
 
-feature_dir = "/media/lili/fce9875a-a5c8-4c35-8f60-db60be29ea5d/extracted_features_moments_raw_hello/feature_val"
-txt_file = open("feature_val_list.txt", mode='a')
+feature_dir = "/media/lili/f9020c94-3607-46d2-bac8-696f0d445708/extracted_features_moments_raw/training_features"
+txt_file = open("feature_train_list.txt", mode='a')
 
 txt_file.write("Feature"+"\n")
 
