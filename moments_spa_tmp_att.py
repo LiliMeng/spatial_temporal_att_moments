@@ -209,16 +209,16 @@ def main():
 	category_dict = moments_category_dict("./feature_list/category_moment.txt")
 	#print("category_dict ", category_dict)
 	# load train data
-	# train_feature_dir = "/media/lili/f9020c94-3607-46d2-bac8-696f0d445708/extracted_features_moments_raw/training_features"
-	# train_name_dir = "/media/lili/f9020c94-3607-46d2-bac8-696f0d445708/extracted_features_moments_raw/training_names"
-	# train_csv_file = "./feature_list/feature_train_list.csv"
-	# train_data_loader = get_loader(feature_data_dir = train_feature_dir,
-	# 								name_data_dir = train_name_dir, 
-	# 								category_dict = category_dict,
-	# 								csv_file = train_csv_file,
-	# 								batch_size = FLAGS.train_batch_size,
-	# 								mode = 'train', 
-	# 								dataset='moments')
+	train_feature_dir = "/media/lili/f9020c94-3607-46d2-bac8-696f0d445708/extracted_features_moments_raw/training_features"
+	train_name_dir = "/media/lili/f9020c94-3607-46d2-bac8-696f0d445708/extracted_features_moments_raw/training_names"
+	train_csv_file = "./feature_list/feature_train_list.csv"
+	train_data_loader = get_loader(feature_data_dir = train_feature_dir,
+									name_data_dir = train_name_dir, 
+									category_dict = category_dict,
+									csv_file = train_csv_file,
+									batch_size = FLAGS.train_batch_size,
+									mode = 'train', 
+									dataset='moments')
 	
 	# load test data
 	test_feature_dir = "/media/lili/fce9875a-a5c8-4c35-8f60-db60be29ea5d/extracted_features_moments_raw/feature_val"
@@ -233,13 +233,6 @@ def main():
 								mode = 'test', 
 								dataset='moments')
 
-	train_data_loader = get_loader(feature_data_dir = test_feature_dir,
-								name_data_dir = test_name_dir, 
-								category_dict = category_dict,
-								csv_file = test_csv_file,
-								batch_size = FLAGS.test_batch_size,
-								mode = 'test', 
-								dataset='moments')
 
 	lstm_action = Action_Att_LSTM(input_size=2048, hidden_size=512, output_size=339, seq_len=FLAGS.num_segments).cuda() 
 	model_optimizer = torch.optim.Adam(lstm_action.parameters(), lr=FLAGS.init_lr, weight_decay=FLAGS.weight_decay)
@@ -252,7 +245,7 @@ def main():
 	
 	log_dir = os.path.join('./Conv_moments_tensorboard', log_name)
 	
-	saved_checkpoint_dir = os.path.join('./saved_checkpoings', log_name)
+	saved_checkpoint_dir = os.path.join('./saved_checkpoints', log_name)
 	saved_weights_folder = os.path.join('./saved_weights',log_name)
 
 	if not os.path.exists(saved_checkpoint_dir):
