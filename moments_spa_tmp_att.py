@@ -30,6 +30,8 @@ import time
 from PIL import Image
 from moments_feature_dataloader import *
 from convlstm import *
+from utils import *
+
 use_cuda = True
 
 class Action_Att_LSTM(nn.Module):
@@ -207,22 +209,31 @@ def main():
 	category_dict = moments_category_dict("./feature_list/category_moment.txt")
 	#print("category_dict ", category_dict)
 	# load train data
-	train_feature_dir = "/media/lili/f9020c94-3607-46d2-bac8-696f0d445708/extracted_features_moments_raw/training_features"
-	train_name_dir = "/media/lili/f9020c94-3607-46d2-bac8-696f0d445708/extracted_features_moments_raw/training_names"
-	train_csv_file = "./feature_list/feature_train_list.csv"
-	train_data_loader = get_loader(feature_data_dir = train_feature_dir,
-									name_data_dir = train_name_dir, 
-									category_dict = category_dict,
-									csv_file = train_csv_file,
-									batch_size = FLAGS.train_batch_size,
-									mode = 'train', 
-									dataset='moments')
+	# train_feature_dir = "/media/lili/f9020c94-3607-46d2-bac8-696f0d445708/extracted_features_moments_raw/training_features"
+	# train_name_dir = "/media/lili/f9020c94-3607-46d2-bac8-696f0d445708/extracted_features_moments_raw/training_names"
+	# train_csv_file = "./feature_list/feature_train_list.csv"
+	# train_data_loader = get_loader(feature_data_dir = train_feature_dir,
+	# 								name_data_dir = train_name_dir, 
+	# 								category_dict = category_dict,
+	# 								csv_file = train_csv_file,
+	# 								batch_size = FLAGS.train_batch_size,
+	# 								mode = 'train', 
+	# 								dataset='moments')
+	
 	# load test data
 	test_feature_dir = "/media/lili/fce9875a-a5c8-4c35-8f60-db60be29ea5d/extracted_features_moments_raw/feature_val"
 	test_name_dir = "/media/lili/fce9875a-a5c8-4c35-8f60-db60be29ea5d/extracted_features_moments_raw/name_val"
 	test_csv_file = "./feature_list/feature_val_list.csv"
 
 	test_data_loader = get_loader(feature_data_dir = test_feature_dir,
+								name_data_dir = test_name_dir, 
+								category_dict = category_dict,
+								csv_file = test_csv_file,
+								batch_size = FLAGS.test_batch_size,
+								mode = 'test', 
+								dataset='moments')
+
+	train_data_loader = get_loader(feature_data_dir = test_feature_dir,
 								name_data_dir = test_name_dir, 
 								category_dict = category_dict,
 								csv_file = test_csv_file,
@@ -241,7 +252,12 @@ def main():
 	
 	log_dir = os.path.join('./Conv_moments_tensorboard', log_name)
 	
+	saved_checkpoint_dir = os.path.join('./saved_checkpoings', log_name)
 	saved_weights_folder = os.path.join('./saved_weights',log_name)
+
+	if not os.path.exists(saved_checkpoint_dir):
+		os.makedirs(saved_checkpoint_dir)
+
 	if not os.path.exists(log_dir):
 		os.makedirs(log_dir)
 	writer = SummaryWriter(log_dir)
@@ -306,6 +322,8 @@ def main():
 		with open(save_train_file, "a") as text_file:
 				print(f"{str(final_train_accuracy)}", file=text_file)
 
+		save_checkpoint({'epoch': epoch_num,
+	                  'model': lstm_action.state_dict(),}, is_best=False, save_folder=saved_checkpoint_dir, filename='moments_checkpoint_{}.pth.tar'.format(epoch_num))
 		avg_test_accuracy = 0
 		lstm_action.eval()
 		test_name_list =[]
@@ -317,7 +335,7 @@ def main():
 		epoch_test_contrast_loss = 0
 		for i, (test_sample, test_batch_name) in enumerate(test_data_loader):
 		
-			test_batch_feature = test_sample['feature'].transpose(1,2).contiguous().view(FLAGS.test_batch_size, 2048, 15, 64)
+			test_batch_feature = test_sample['feature'].transpose(1,2).contiguous().view(-1, 2048, 15, 64)
 			test_batch_label = test_sample['label']
 			
 			test_batch_feature = Variable(test_batch_feature, volatile=True).cuda().float()
@@ -329,7 +347,7 @@ def main():
 			test_name_list.append(test_batch_name)
 			test_spa_att_weights_list.append(test_mask)
 			
-			print("batch_test_accuracy: ", test_accuracy)
+			print("{} batch_test_accuracy: ".format(i), test_accuracy)
 			total_test_corrects += test_corrects 
 
 			avg_test_accuracy+= test_accuracy
@@ -378,9 +396,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', type=str, default='Moments',
                         help='dataset: "moments"')
-    parser.add_argument('--train_batch_size', type=int, default=64,
+    parser.add_argument('--train_batch_size', type=int, default=32,
                     	help='train_batch_size: [100]')
-    parser.add_argument('--test_batch_size', type=int, default=64,
+    parser.add_argument('--test_batch_size', type=int, default=32,
                     	help='test_batch_size: [100]')
     parser.add_argument('--max_epoch', type=int, default=200,
                     	help='max number of training epoch: [60]')
