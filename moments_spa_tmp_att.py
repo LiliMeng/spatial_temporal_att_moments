@@ -261,6 +261,64 @@ def main():
 
 	num_step_per_epoch_train = 802243/FLAGS.train_batch_size
 	num_step_per_epoch_test = 33900/FLAGS.test_batch_size
+
+	saved_checkpoint = torch.load('./saved_checkpoints/Contrast_0.0001_TV_reg1e-05_mask_LRPatience5_Adam0.0001_decay0.0001_dropout_0.2_Temporal_ConvLSTM_hidden512_regFactor_1_Sep_10_17_01/moments_checkpoint_0_60012.pth.tar')
+	lstm_action.load_state_dict( saved_checkpoint['model'] )
+	
+	avg_test_accuracy = 0
+	lstm_action.eval()
+	test_name_list =[]
+	test_spa_att_weights_list = []
+	total_test_corrects = 0
+	epoch_test_loss = 0
+	epoch_test_reg_loss =0
+	epoch_test_tv_loss =0 
+	epoch_test_contrast_loss = 0
+
+	for i, (test_sample, test_batch_name) in enumerate(test_data_loader):
+	
+		test_batch_feature = test_sample['feature'].transpose(1,2).contiguous().view(-1, 2048, 15, 64)
+		test_batch_label = test_sample['label']
+		
+		test_batch_feature = Variable(test_batch_feature, volatile=True).cuda().float()
+		test_batch_label = Variable(test_batch_label, volatile=True).cuda().long()
+		
+
+		test_mask, test_logits, test_loss, test_reg_loss, test_tv_loss, test_contrast_loss, test_accuracy, test_spa_att_weights, test_corrects = test_step(FLAGS.test_batch_size, test_batch_feature, test_batch_label, lstm_action, criterion)
+
+		test_name_list.append(test_batch_name)
+		test_spa_att_weights_list.append(test_mask)
+		
+		print("{} batch_test_accuracy: ".format(i), test_accuracy)
+		total_test_corrects += test_corrects 
+
+		avg_test_accuracy+= test_accuracy
+
+		epoch_test_loss += test_loss
+
+		epoch_test_reg_loss += test_reg_loss
+		epoch_test_tv_loss += test_tv_loss
+		epoch_test_contrast_loss += test_contrast_loss
+
+	avg_test_corrects = total_test_corrects*100/33900
+
+	epoch_test_loss = epoch_test_loss/num_step_per_epoch_test
+	epoch_test_reg_loss = epoch_test_reg_loss/num_step_per_epoch_test
+	epoch_test_tv_loss = epoch_test_tv_loss/num_step_per_epoch_test
+	epoch_test_contrast_loss = epoch_test_contrast_loss/num_step_per_epoch_test
+	test_spa_att_weights_np = torch.cat(test_spa_att_weights_list, dim=0)
+	#print("test_spa_att_weights_np.shape ", test_spa_att_weights_np.shape)
+	np.save(saved_weights_folder+"/test_name.npy", np.asarray(test_name_list))
+	np.save(saved_weights_folder+"/test_att_weights.npy", test_spa_att_weights_np.cpu().data.numpy())
+
+	final_test_accuracy = avg_test_accuracy/num_step_per_epoch_test
+	print("eval_epoch: test accuracy: " + str(final_test_accuracy))
+	print("eval_epoch: test corrects: " + str(avg_test_corrects))
+	
+	save_test_file = log_name+"_test_acc.txt"
+	with open(save_test_file, "a") as text_file1:
+			print(f"{str(final_test_accuracy)}", file=text_file1)
+
 	for epoch_num in range(maxEpoch):
 
 		lstm_action.train()
@@ -273,6 +331,8 @@ def main():
 		epoch_train_reg_loss = 0 
 		epoch_train_tv_loss = 0
 		epoch_train_contrast_loss = 0
+
+
 		for i, (train_sample,train_batch_name) in enumerate(train_data_loader):
 			
 			train_batch_feature = train_sample['feature'].transpose(1,2).contiguous().view(-1, 2048, 15, 64).contiguous()
@@ -292,6 +352,10 @@ def main():
 			epoch_train_contrast_loss += train_contrast_loss
 			print("batch {}, train_acc: {} ".format(i, train_accuracy))
 			total_train_corrects+= train_corrects
+
+			if i%(5000+1)==0:
+				save_checkpoint({'epoch': epoch_num,
+	                  'model': lstm_action.state_dict(),}, is_best=False, save_folder=saved_checkpoint_dir, filename='moments_checkpoint_{}_{}.pth.tar'.format(epoch_num, i))
 			
 		train_spa_att_weights_np = torch.cat(train_spa_att_weights_list, dim=0)
 		avg_train_corrects = total_train_corrects *100 /802243
@@ -389,9 +453,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', type=str, default='Moments',
                         help='dataset: "moments"')
-    parser.add_argument('--train_batch_size', type=int, default=32,
+    parser.add_argument('--train_batch_size', type=int, default=10,
                     	help='train_batch_size: [100]')
-    parser.add_argument('--test_batch_size', type=int, default=32,
+    parser.add_argument('--test_batch_size', type=int, default=64,
                     	help='test_batch_size: [100]')
     parser.add_argument('--max_epoch', type=int, default=200,
                     	help='max number of training epoch: [60]')
