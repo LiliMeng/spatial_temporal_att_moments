@@ -262,7 +262,7 @@ def main():
 	num_step_per_epoch_train = 802243/FLAGS.train_batch_size
 	num_step_per_epoch_test = 33900/FLAGS.test_batch_size
 
-	saved_checkpoint = torch.load('./saved_checkpoints/Contrast_0.0001_TV_reg1e-05_mask_LRPatience5_Adam0.0001_decay0.0001_dropout_0.2_Temporal_ConvLSTM_hidden512_regFactor_1_Sep_10_17_01/moments_checkpoint_0_60012.pth.tar')
+	saved_checkpoint = torch.load('./saved_checkpoints/Contrast_0.0001_TV_reg1e-05_mask_LRPatience5_Adam0.0001_decay0.0001_dropout_0.2_Temporal_ConvLSTM_hidden512_regFactor_1_Sep_14_11_17/moments_checkpoint_0_60012.pth.tar')
 	lstm_action.load_state_dict( saved_checkpoint['model'] )
 	
 	avg_test_accuracy = 0
