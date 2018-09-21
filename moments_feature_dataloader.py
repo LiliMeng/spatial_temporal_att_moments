@@ -56,7 +56,7 @@ def get_loader(feature_data_dir, name_data_dir, category_dict, csv_file, batch_s
 	if dataset == 'moments':
 		dataset = MomentsDataset(mode, feature_data_dir, name_data_dir, category_dict, csv_file)
 
-	data_loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=shuffle, num_workers=4)
+	data_loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=shuffle, num_workers=8)
 
 	return data_loader
 
